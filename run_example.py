@@ -14,7 +14,7 @@ from model import (
 )
 
 # Sample data (batch_size, n_channels, sample_length)
-x = torch.randn(64, 16, 2000)
+x = torch.randn(64, 16, 1000)
 
 """
 SPaRCNet - 1D CNN DenseNet

@@ -4,14 +4,27 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.init import constant_
 import numpy as np
 from linear_attention_transformer import LinearAttentionTransformer
+import mup
 
+def init_method_normal(sigma):
+    """Init method based on N(0, sigma)."""
+    def init_(tensor):
+        return nn.init.normal_(tensor, mean=0.0, std=sigma)
+    return init_
 
 class PatchFrequencyEmbedding(nn.Module):
-    def __init__(self, emb_size=256, n_freq=101):
+    def __init__(self, emb_size=256, n_freq=101, encoder_var=1):
         super().__init__()
+        self.init_method = init_method_normal((encoder_var / n_freq) ** .5)
         self.projection = nn.Linear(n_freq, emb_size)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.init_method(self.projection.weight)
+        constant_(self.projection.bias, 0.) 
 
     def forward(self, x):
         """
@@ -24,12 +37,18 @@ class PatchFrequencyEmbedding(nn.Module):
 
 
 class ClassificationHead(nn.Sequential):
-    def __init__(self, emb_size, n_classes):
+    def __init__(self, emb_size, n_classes, use_mup=False):
         super().__init__()
-        self.clshead = nn.Sequential(
-            nn.ELU(),
-            nn.Linear(emb_size, n_classes),
-        )
+        if use_mup:
+            self.clshead = nn.Sequential(
+                nn.ELU(),
+                mup.MuReadout(emb_size, n_classes)
+            )
+        else:
+            self.clshead = nn.Sequential(
+                nn.ELU(),
+                nn.Linear(emb_size, n_classes),
+            )
 
     def forward(self, x):
         out = self.clshead(x)
@@ -67,36 +86,47 @@ class BIOTEncoder(nn.Module):
     def __init__(
         self,
         emb_size=256,
+        encoder_var=1,
         heads=8,
         depth=4,
         n_channels=16,
         n_fft=200,
         hop_length=100,
+        scaling=None,
         **kwargs
     ):
         super().__init__()
 
         self.n_fft = n_fft
         self.hop_length = hop_length
+        self.encoder_var = encoder_var
 
         self.patch_embedding = PatchFrequencyEmbedding(
-            emb_size=emb_size, n_freq=self.n_fft // 2 + 1
+            emb_size=emb_size, n_freq=self.n_fft // 2 + 1,
+            encoder_var=encoder_var
         )
         self.transformer = LinearAttentionTransformer(
             dim=emb_size,
+            encoder_var=encoder_var,
             heads=heads,
             depth=depth,
             max_seq_len=1024,
             attn_layer_dropout=0.2,  # dropout right after self-attention layer
             attn_dropout=0.2,  # dropout post-attention
+            output_mult=1,
+            # local_attn_window_size=emb_size,
+            # scaling=scaling
+            use_mup=kwargs.get("use_mup", False)
         )
         self.positional_encoding = PositionalEncoding(emb_size)
 
         # channel token, N_channels >= your actual channels
-        self.channel_tokens = nn.Embedding(n_channels, 256)
+        self.channel_tokens = nn.Embedding(n_channels, emb_size)
         self.index = nn.Parameter(
             torch.LongTensor(range(n_channels)), requires_grad=False
         )
+        if kwargs.get("use_mup", False):
+            print("using mup")
 
     def stft(self, sample):
         spectral = torch.stft( 
@@ -149,7 +179,7 @@ class BIOTClassifier(nn.Module):
     def __init__(self, emb_size=256, heads=8, depth=4, n_classes=6, **kwargs):
         super().__init__()
         self.biot = BIOTEncoder(emb_size=emb_size, heads=heads, depth=depth, **kwargs)
-        self.classifier = ClassificationHead(emb_size, n_classes)
+        self.classifier = ClassificationHead(emb_size, n_classes, use_mup=kwargs.get("use_mup", False))
 
     def forward(self, x):
         x = self.biot(x)
@@ -159,18 +189,31 @@ class BIOTClassifier(nn.Module):
 
 # unsupervised pre-train module
 class UnsupervisedPretrain(nn.Module):
-    def __init__(self, emb_size=256, heads=8, depth=4, n_channels=18, **kwargs):
+    def __init__(self, emb_size=256, heads=8, depth=4, n_channels=18, encoder_var=1, **kwargs):
         super(UnsupervisedPretrain, self).__init__()
-        self.biot = BIOTEncoder(emb_size, heads, depth, n_channels, **kwargs)
-        self.prediction = nn.Sequential(
-            nn.Linear(256, 256),
-            nn.GELU(),
-            nn.Linear(256, 256),
-        )
+        self.biot = BIOTEncoder(emb_size=emb_size, heads=heads, depth=depth, n_channels=n_channels, encoder_var=encoder_var, **kwargs)
+        self.fn1 = nn.Linear(emb_size, emb_size)
+        # self.fn2 = mup.MuReadout(emb_size, emb_size, bias=False) # include output mult later
+        self.fn2 = nn.Linear(emb_size, emb_size)
+        self.gelu = nn.GELU()
+        self.init_method = init_method_normal((encoder_var/emb_size) ** .5)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # nn.init.kaiming_normal_(self.fn1.weight, a=1, mode='fan_in')
+        # nn.init.kaiming_normal_(self.fn2.weight, a=1, mode='fan_in')
+        
+        self.init_method(self.fn2.weight)
+        self.init_method(self.fn1.weight)
+        # nn.init.zeros_(self.fn2.weight)
+        constant_(self.fn1.bias, 0.)
+        constant_(self.fn2.bias, 0.)
+        # self.fn2.weight.data.zero_()
+        # self.fn2.bias.data.zero_()
 
     def forward(self, x, n_channel_offset=0):
         emb = self.biot(x, n_channel_offset, perturb=True)
-        emb = self.prediction(emb)
+        emb = self.fn2(self.gelu(self.fn1(emb)))
         pred_emb = self.biot(x, n_channel_offset)
         return emb, pred_emb
 

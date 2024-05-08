@@ -9,11 +9,53 @@ from scipy.interpolate import interp1d
 from scipy.signal import butter, lfilter
 
 
+def get_memmap_length(path):
+    memmap = np.memmap(path, dtype=float, mode='r')
+    # 24 channels
+    return len(memmap)/24
+
+class TUABLoaderCustom(torch.utils.data.Dataset):
+    def __init__(self, root, sampling_rate=256):
+        self.root = root
+        dats = []
+        labels = []
+        for folder in ('normal', 'abnormal'):
+            for file in os.listdir(os.path.join(root, folder)):
+                if file[-3:] == 'dat':
+                    dats.append(os.path.join(root, folder, file))
+                    labels.append(1 if folder=='abnormal' else 0)
+        self.dats = dats
+        # 2560 for 10 seconds of 256 hz data
+        self.inds = np.cumsum([get_memmap_length(dat)//2560 for dat in self.dats]).astype(int)
+        self.labels = labels
+        self.default_rate = 256
+        self.sampling_rate = sampling_rate
+
+    def __len__(self):
+        return self.inds[-1]
+
+    def __getitem__(self, index):
+        i = np.searchsorted(self.inds, index)
+        # a float in python is 8 bytes since it's a double
+        memmap = np.memmap(self.dats[i], dtype=float, mode = 'r', offset=24*8*(self.inds[i]-index), shape=(2560, 24))
+        X = np.array(memmap)
+        # from default 200Hz to ?
+        if self.sampling_rate != self.default_rate:
+            X = resample(X, 10 * self.sampling_rate, axis=-1)
+            print("*** Resampled but probably shouldn't have! ***")
+        X = X / (
+            np.quantile(np.abs(X), q=0.95, method="linear", axis=-1, keepdims=True)
+            + 1e-8
+        )
+        Y = self.labels[i]
+        X = torch.FloatTensor(X)
+        return X, Y
+
+
 class TUABLoader(torch.utils.data.Dataset):
     def __init__(self, root, files, sampling_rate=200):
         self.root = root
         self.files = files
-        self.default_rate = 200
         self.sampling_rate = sampling_rate
 
     def __len__(self):
@@ -23,8 +65,9 @@ class TUABLoader(torch.utils.data.Dataset):
         sample = pickle.load(open(os.path.join(self.root, self.files[index]), "rb"))
         X = sample["X"]
         # from default 200Hz to ?
-        if self.sampling_rate != self.default_rate:
-            X = resample(X, 10 * self.sampling_rate, axis=-1)
+        # if self.sampling_rate != self.default_rate:
+        #     X = resample(X, 10 * self.sampling_rate, axis=-1)
+        assert X.shape[-1] == 10 * self.sampling_rate, f"Data has sampling rate of {X.shape[-1]//10} Hz, not {self.sampling_rate} Hz"
         X = X / (
             np.quantile(np.abs(X), q=0.95, method="linear", axis=-1, keepdims=True)
             + 1e-8
@@ -87,7 +130,7 @@ class TUEVLoader(torch.utils.data.Dataset):
     def __init__(self, root, files, sampling_rate=200):
         self.root = root
         self.files = files
-        self.default_rate = 256
+        self.default_rate = 250
         self.sampling_rate = sampling_rate
 
     def __len__(self):
