@@ -205,7 +205,7 @@ def pretrain(args):
     # )
     N_version = args.name
     # define the model
-    save_path = f"/media/data_ssd/results/eeg/multi_gpu_test_with_correct_normalization_and_loading_16_channels_200hz_checkpoints/{N_version}-unsupervised/checkpoints"
+    save_path = f"/media/data_ssd/results/eeg/May_8_checkpoints/{N_version}-unsupervised/checkpoints"
 
     model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps)
     set_base_shapes(model, "/home/workplace/thomas/BIOT/base_shapes_LitModel.bsh")
@@ -213,7 +213,7 @@ def pretrain(args):
     logger = TensorBoardLogger(
         save_dir="/media/data_ssd/results/eeg/",
         version=f"{N_version}/checkpoints",
-        name="multi_gpu_test_with_correct_normalization_and_loading_16_channels_200hz",
+        name="May_8",
     )
 
     trainer = pl.Trainer(
@@ -244,7 +244,7 @@ class Args:
     emb_size = 32
     depth = 4
     heads = emb_size//8
-    n_fft = 256
+    n_fft = 200
     hop_length = n_fft//2
     # device = 0
     steps = -1
@@ -277,5 +277,5 @@ if __name__=="__main__":
     #     args.steps = a.epochs * 391700
     # args.device = a.device
     args.seed = a.seed
-    args.name = f"multi_gpu_test_with_correct_normalization_and_loading_16_channels_200hz_{args.emb_size}"
+    args.name = f"May_8_{args.emb_size}"
     pretrain(args)

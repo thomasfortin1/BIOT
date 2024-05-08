@@ -303,7 +303,7 @@ def supervised(args):
             use_mup=True
         )
 
-        if args.pretrain_model_path and (args.sampling_rate == 256):
+        if args.pretrain_model_path and (args.sampling_rate == 200):
             checkpoint = torch.load(args.pretrain_model_path)
             state_dict = {}
             for k, v in checkpoint['state_dict'].items():
