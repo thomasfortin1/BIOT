@@ -1,0 +1,146 @@
+# This is a base shape file encoded in yaml
+# - `null` indicates a dimension is "finite", i.e. a non-"width" dimension
+# - a number indicates the base dimension of an "infinite" dimension, i.e. some notion of "width"
+biot.channel_tokens.weight:
+- null
+- 256
+biot.index:
+- null
+biot.patch_embedding.projection.bias:
+- 256
+biot.patch_embedding.projection.weight:
+- 256
+- null
+biot.transformer.layers.layers.0.0.fn.to_k.weight:
+- 256
+- 256
+biot.transformer.layers.layers.0.0.fn.to_out.bias:
+- 256
+biot.transformer.layers.layers.0.0.fn.to_out.weight:
+- 256
+- 256
+biot.transformer.layers.layers.0.0.fn.to_q.weight:
+- 256
+- 256
+biot.transformer.layers.layers.0.0.fn.to_v.weight:
+- 256
+- 256
+biot.transformer.layers.layers.0.0.norm.bias:
+- 256
+biot.transformer.layers.layers.0.0.norm.weight:
+- 256
+biot.transformer.layers.layers.0.1.fn.fn.w1.bias:
+- 1024
+biot.transformer.layers.layers.0.1.fn.fn.w1.weight:
+- 1024
+- 256
+biot.transformer.layers.layers.0.1.fn.fn.w2.bias:
+- 256
+biot.transformer.layers.layers.0.1.fn.fn.w2.weight:
+- 256
+- 1024
+biot.transformer.layers.layers.0.1.norm.bias:
+- 256
+biot.transformer.layers.layers.0.1.norm.weight:
+- 256
+biot.transformer.layers.layers.1.0.fn.to_k.weight:
+- 256
+- 256
+biot.transformer.layers.layers.1.0.fn.to_out.bias:
+- 256
+biot.transformer.layers.layers.1.0.fn.to_out.weight:
+- 256
+- 256
+biot.transformer.layers.layers.1.0.fn.to_q.weight:
+- 256
+- 256
+biot.transformer.layers.layers.1.0.fn.to_v.weight:
+- 256
+- 256
+biot.transformer.layers.layers.1.0.norm.bias:
+- 256
+biot.transformer.layers.layers.1.0.norm.weight:
+- 256
+biot.transformer.layers.layers.1.1.fn.fn.w1.bias:
+- 1024
+biot.transformer.layers.layers.1.1.fn.fn.w1.weight:
+- 1024
+- 256
+biot.transformer.layers.layers.1.1.fn.fn.w2.bias:
+- 256
+biot.transformer.layers.layers.1.1.fn.fn.w2.weight:
+- 256
+- 1024
+biot.transformer.layers.layers.1.1.norm.bias:
+- 256
+biot.transformer.layers.layers.1.1.norm.weight:
+- 256
+biot.transformer.layers.layers.2.0.fn.to_k.weight:
+- 256
+- 256
+biot.transformer.layers.layers.2.0.fn.to_out.bias:
+- 256
+biot.transformer.layers.layers.2.0.fn.to_out.weight:
+- 256
+- 256
+biot.transformer.layers.layers.2.0.fn.to_q.weight:
+- 256
+- 256
+biot.transformer.layers.layers.2.0.fn.to_v.weight:
+- 256
+- 256
+biot.transformer.layers.layers.2.0.norm.bias:
+- 256
+biot.transformer.layers.layers.2.0.norm.weight:
+- 256
+biot.transformer.layers.layers.2.1.fn.fn.w1.bias:
+- 1024
+biot.transformer.layers.layers.2.1.fn.fn.w1.weight:
+- 1024
+- 256
+biot.transformer.layers.layers.2.1.fn.fn.w2.bias:
+- 256
+biot.transformer.layers.layers.2.1.fn.fn.w2.weight:
+- 256
+- 1024
+biot.transformer.layers.layers.2.1.norm.bias:
+- 256
+biot.transformer.layers.layers.2.1.norm.weight:
+- 256
+biot.transformer.layers.layers.3.0.fn.to_k.weight:
+- 256
+- 256
+biot.transformer.layers.layers.3.0.fn.to_out.bias:
+- 256
+biot.transformer.layers.layers.3.0.fn.to_out.weight:
+- 256
+- 256
+biot.transformer.layers.layers.3.0.fn.to_q.weight:
+- 256
+- 256
+biot.transformer.layers.layers.3.0.fn.to_v.weight:
+- 256
+- 256
+biot.transformer.layers.layers.3.0.norm.bias:
+- 256
+biot.transformer.layers.layers.3.0.norm.weight:
+- 256
+biot.transformer.layers.layers.3.1.fn.fn.w1.bias:
+- 1024
+biot.transformer.layers.layers.3.1.fn.fn.w1.weight:
+- 1024
+- 256
+biot.transformer.layers.layers.3.1.fn.fn.w2.bias:
+- 256
+biot.transformer.layers.layers.3.1.fn.fn.w2.weight:
+- 256
+- 1024
+biot.transformer.layers.layers.3.1.norm.bias:
+- 256
+biot.transformer.layers.layers.3.1.norm.weight:
+- 256
+classifier.clshead.1.bias:
+- null
+classifier.clshead.1.weight:
+- null
+- 256

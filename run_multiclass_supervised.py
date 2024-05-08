@@ -7,6 +7,9 @@ from tqdm import tqdm
 import numpy as np
 import torch.nn as nn
 
+import mup
+from mup import set_base_shapes
+
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.strategies import DDPStrategy
@@ -26,10 +29,13 @@ from utils import TUEVLoader, HARLoader
 
 
 class LitModel_finetune(pl.LightningModule):
-    def __init__(self, args, model):
+    def __init__(self, args, model, use_mup=False):
         super().__init__()
         self.args = args
         self.model = model
+        self.test_step_outputs = []
+        self.val_step_outputs = []
+        self.use_mup = use_mup
 
     def training_step(self, batch, batch_idx):
         X, y = batch
@@ -44,12 +50,12 @@ class LitModel_finetune(pl.LightningModule):
             convScore = self.model(X)
             step_result = convScore.cpu().numpy()
             step_gt = y.cpu().numpy()
-        return step_result, step_gt
+        self.val_step_outputs.append((step_result, step_gt))
 
-    def validation_epoch_end(self, val_step_outputs):
+    def on_validation_epoch_end(self):
         result = []
         gt = np.array([])
-        for out in val_step_outputs:
+        for out in self.val_step_outputs:
             result.append(out[0])
             gt = np.append(gt, out[1])
 
@@ -61,6 +67,7 @@ class LitModel_finetune(pl.LightningModule):
         self.log("val_cohen", result["cohen_kappa"], sync_dist=True)
         self.log("val_f1", result["f1_weighted"], sync_dist=True)
         print(result)
+        self.val_step_outputs = []
 
     def test_step(self, batch, batch_idx):
         X, y = batch
@@ -68,12 +75,12 @@ class LitModel_finetune(pl.LightningModule):
             convScore = self.model(X)
             step_result = convScore.cpu().numpy()
             step_gt = y.cpu().numpy()
-        return step_result, step_gt
+        self.test_step_outputs.append((step_result, step_gt))
 
-    def test_epoch_end(self, test_step_outputs):
+    def on_test_epoch_end(self):
         result = []
         gt = np.array([])
-        for out in test_step_outputs:
+        for out in self.test_step_outputs:
             result.append(out[0])
             gt = np.append(gt, out[1])
 
@@ -85,14 +92,22 @@ class LitModel_finetune(pl.LightningModule):
         self.log("test_cohen", result["cohen_kappa"], sync_dist=True)
         self.log("test_f1", result["f1_weighted"], sync_dist=True)
 
+        self.test_step_outputs = []
         return result
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.model.parameters(),
-            lr=self.args.lr,
-            weight_decay=self.args.weight_decay,
-        )
+        if self.use_mup:
+            optimizer = mup.MuAdamW(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
+        else:
+            optimizer = torch.optim.AdamW(
+                self.model.parameters(),
+                lr=self.args.lr,
+                weight_decay=self.args.weight_decay,
+            )
 
         return [optimizer]  # , [scheduler]
 
@@ -105,7 +120,7 @@ def prepare_TUEV_dataloader(args):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
-    root = "/srv/local/data/TUH/tuh_eeg_events/v2.0.0/edf"
+    root = "/media/data_ssd/data/tuev_processed/"
 
     train_files = os.listdir(os.path.join(root, "processed_train"))
     train_sub = list(set([f.split("_")[0] for f in train_files]))
@@ -205,6 +220,8 @@ def supervised(args):
 
     else:
         raise NotImplementedError
+    
+    use_mup = False
 
     # define the model
     if args.model == "SPaRCNet":
@@ -271,11 +288,37 @@ def supervised(args):
         )
         if args.pretrain_model_path and (args.sampling_rate == 200):
             model.biot.load_state_dict(torch.load(args.pretrain_model_path))
+            # set_base_shapes(model.biot, "/home/workplace/thomas/BIOT/base_shapes_LitModel_FineTune_cls.bsh", rescale_params=False)
             print(f"load pretrain model from {args.pretrain_model_path}")
+
+    elif args.model == "my_BIOT":
+        use_mup = True
+        model = BIOTClassifier(
+            n_classes=args.n_classes,
+            emb_size=512,
+            # set the n_channels according to the pretrained model if necessary
+            n_channels=args.in_channels,
+            n_fft=args.token_size,
+            hop_length=args.hop_length,
+            use_mup=True
+        )
+
+        if args.pretrain_model_path and (args.sampling_rate == 256):
+            checkpoint = torch.load(args.pretrain_model_path)
+            state_dict = {}
+            for k, v in checkpoint['state_dict'].items():
+                if 'model.biot.' in k:
+                    state_dict[k.replace('model.biot.', '')] = v
+            model.biot.load_state_dict(state_dict=state_dict)
+            print(f"load pretrain model from {args.pretrain_model_path}")
+            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=False)
+        else:
+            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
+
 
     else:
         raise NotImplementedError
-    lightning_model = LitModel_finetune(args, model)
+    lightning_model = LitModel_finetune(args, model, use_mup=use_mup)
 
     # logger and callbacks
     version = f"{args.dataset}-{args.model}-{args.lr}-{args.batch_size}-{args.sampling_rate}-{args.token_size}-{args.hop_length}"
@@ -288,16 +331,24 @@ def supervised(args):
         monitor="val_cohen", patience=5, verbose=False, mode="max"
     )
 
+    checkpoint_callback = ModelCheckpoint(
+        monitor='val_cohen',
+        mode='max',
+        dirpath=f'./checkpoints/{version}',
+        filename='pre-trained_mine_multi_gpu_test_with_correct_normalzation_512_{epoch:02d}-val_cohen{val_cohen:.2f}',
+        auto_insert_metric_name=False
+     )
+
     trainer = pl.Trainer(
-        devices=[0],
+        devices=[1],
         accelerator="gpu",
         strategy=DDPStrategy(find_unused_parameters=False),
-        auto_select_gpus=True,
         benchmark=True,
         enable_checkpointing=True,
         logger=logger,
         max_epochs=args.epochs,
-        callbacks=[early_stop_callback],
+        callbacks=[early_stop_callback, checkpoint_callback],
+        val_check_interval=0.25,
     )
 
     # train the model
@@ -310,6 +361,8 @@ def supervised(args):
         model=lightning_model, ckpt_path="best", dataloaders=test_loader
     )[0]
     print(pretrain_result)
+
+    return pretrain_result['test_cohen']
 
 
 if __name__ == "__main__":
@@ -350,4 +403,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    supervised(args)
+    test_cohen = supervised(args)
+    with open("test_cohen.txt", "a") as f:
+        f.write(f"{test_cohen}\n")
+

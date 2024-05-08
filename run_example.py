@@ -14,7 +14,7 @@ from model import (
 )
 
 # Sample data (batch_size, n_channels, sample_length)
-x = torch.randn(64, 16, 2000)
+x = torch.randn(64, 16, 1000)
 
 """
 SPaRCNet - 1D CNN DenseNet
@@ -28,7 +28,7 @@ BIOT-pretrain-SHHS+PREST - pre-trained BIOT model on 5M+5M EEG data
 BIOT-pretrain-dix-datasets - pre-trained BIOT model on all six EEG data
 """
 
-model_name = sys.argv[0]
+model_name = sys.argv[1]
 
 if model_name == "SPaRCNet":
     sparcnet = SPaRCNet(

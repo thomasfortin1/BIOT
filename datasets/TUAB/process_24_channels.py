@@ -22,27 +22,31 @@ import mne
 # (signals[signal_names['EEG F4-REF']] - signals[signal_names['EEG C4-REF']]),  # 19
 # (signals[signal_names['EEG C4-REF']] - signals[signal_names['EEG P4-REF']]),  # 20
 # (signals[signal_names['EEG P4-REF']] - signals[signal_names['EEG O2-REF']]))) # 21
-standard_channels = [
-    "EEG FP1-REF",
-    "EEG F7-REF",
-    "EEG T3-REF",
-    "EEG T5-REF",
-    "EEG O1-REF",
-    "EEG FP2-REF",
-    "EEG F8-REF",
-    "EEG T4-REF",
-    "EEG T6-REF",
-    "EEG O2-REF",
-    "EEG FP1-REF",
-    "EEG F3-REF",
-    "EEG C3-REF",
-    "EEG P3-REF",
-    "EEG O1-REF",
-    "EEG FP2-REF",
-    "EEG F4-REF",
-    "EEG C4-REF",
-    "EEG P4-REF",
-    "EEG O2-REF",
+channels_to_keep = [
+    'EEG FP1-REF',
+     'EEG FP2-REF',
+     'EEG F4-REF',
+     'EEG C3-REF',
+     'EEG C4-REF',
+     'EEG P3-REF',
+     'EEG P4-REF',
+     'EEG O1-REF',
+     'EEG O2-REF',
+     'EEG F7-REF',
+     'EEG F8-REF',
+     'EEG T3-REF',
+     'EEG T4-REF',
+     'EEG T5-REF',
+     'EEG T6-REF',
+     'EEG F3-REF',
+     'EEG CZ-REF',
+     'EEG FZ-REF',
+     'EEG PZ-REF',
+     'EEG T2-REF',
+     'EEG T1-REF',
+     'EEG EKG1-REF',
+     'EEG A1-REF',
+     'EEG A2-REF',
 ]
 
 
@@ -54,74 +58,8 @@ def split_and_dump(params):
             file_path = os.path.join(fetch_folder, file)
             raw = mne.io.read_raw_edf(file_path, preload=True)
             raw.resample(256)
-            ch_name = raw.ch_names
-            raw_data = raw.get_data()
-            channeled_data = raw_data.copy()[:16]
             try:
-                channeled_data[0] = (
-                    raw_data[ch_name.index("EEG FP1-REF")]
-                    - raw_data[ch_name.index("EEG F7-REF")]
-                )
-                channeled_data[1] = (
-                    raw_data[ch_name.index("EEG F7-REF")]
-                    - raw_data[ch_name.index("EEG T3-REF")]
-                )
-                channeled_data[2] = (
-                    raw_data[ch_name.index("EEG T3-REF")]
-                    - raw_data[ch_name.index("EEG T5-REF")]
-                )
-                channeled_data[3] = (
-                    raw_data[ch_name.index("EEG T5-REF")]
-                    - raw_data[ch_name.index("EEG O1-REF")]
-                )
-                channeled_data[4] = (
-                    raw_data[ch_name.index("EEG FP2-REF")]
-                    - raw_data[ch_name.index("EEG F8-REF")]
-                )
-                channeled_data[5] = (
-                    raw_data[ch_name.index("EEG F8-REF")]
-                    - raw_data[ch_name.index("EEG T4-REF")]
-                )
-                channeled_data[6] = (
-                    raw_data[ch_name.index("EEG T4-REF")]
-                    - raw_data[ch_name.index("EEG T6-REF")]
-                )
-                channeled_data[7] = (
-                    raw_data[ch_name.index("EEG T6-REF")]
-                    - raw_data[ch_name.index("EEG O2-REF")]
-                )
-                channeled_data[8] = (
-                    raw_data[ch_name.index("EEG FP1-REF")]
-                    - raw_data[ch_name.index("EEG F3-REF")]
-                )
-                channeled_data[9] = (
-                    raw_data[ch_name.index("EEG F3-REF")]
-                    - raw_data[ch_name.index("EEG C3-REF")]
-                )
-                channeled_data[10] = (
-                    raw_data[ch_name.index("EEG C3-REF")]
-                    - raw_data[ch_name.index("EEG P3-REF")]
-                )
-                channeled_data[11] = (
-                    raw_data[ch_name.index("EEG P3-REF")]
-                    - raw_data[ch_name.index("EEG O1-REF")]
-                )
-                channeled_data[12] = (
-                    raw_data[ch_name.index("EEG FP2-REF")]
-                    - raw_data[ch_name.index("EEG F4-REF")]
-                )
-                channeled_data[13] = (
-                    raw_data[ch_name.index("EEG F4-REF")]
-                    - raw_data[ch_name.index("EEG C4-REF")]
-                )
-                channeled_data[14] = (
-                    raw_data[ch_name.index("EEG C4-REF")]
-                    - raw_data[ch_name.index("EEG P4-REF")]
-                )
-                channeled_data[15] = (
-                    raw_data[ch_name.index("EEG P4-REF")]
-                    - raw_data[ch_name.index("EEG O2-REF")]
-                )
+                channeled_data = raw.get_data(channels_to_keep)
             except:
                 with open("tuab-process-error-files.txt", "a") as f:
                     f.write(file + "\n")
@@ -143,6 +81,7 @@ if __name__ == "__main__":
     # root to abnormal dataset
     root = "/media/data_ssd/data/tuab/isip.piconepress.com/projects/tuh_eeg/downloads/tuh_eeg_abnormal/v3.0.1/edf"
     channel_std = "01_tcp_ar"
+    new_root = "proccessed_mine"
 
     # train, val abnormal subjects
     train_val_abnormal = os.path.join(root, "train", "abnormal", channel_std)
@@ -175,20 +114,20 @@ if __name__ == "__main__":
     test_n_sub = list(set([item.split("_")[0] for item in os.listdir(test_normal)]))
 
     # create the train, val, test sample folder
-    if not os.path.exists(os.path.join(root, "processed")):
-        os.makedirs(os.path.join(root, "processed"))
+    if not os.path.exists(os.path.join(root, new_root)):
+        os.makedirs(os.path.join(root, new_root))
 
-    if not os.path.exists(os.path.join(root, "processed", "train")):
-        os.makedirs(os.path.join(root, "processed", "train"))
-    train_dump_folder = os.path.join(root, "processed", "train")
+    if not os.path.exists(os.path.join(root, new_root, "train")):
+        os.makedirs(os.path.join(root, new_root, "train"))
+    train_dump_folder = os.path.join(root, new_root, "train")
 
-    if not os.path.exists(os.path.join(root, "processed", "val")):
-        os.makedirs(os.path.join(root, "processed", "val"))
-    val_dump_folder = os.path.join(root, "processed", "val")
+    if not os.path.exists(os.path.join(root, new_root, "val")):
+        os.makedirs(os.path.join(root, new_root, "val"))
+    val_dump_folder = os.path.join(root, new_root, "val")
 
-    if not os.path.exists(os.path.join(root, "processed", "test")):
-        os.makedirs(os.path.join(root, "processed", "test"))
-    test_dump_folder = os.path.join(root, "processed", "test")
+    if not os.path.exists(os.path.join(root, new_root, "test")):
+        os.makedirs(os.path.join(root, new_root, "test"))
+    test_dump_folder = os.path.join(root, new_root, "test")
 
     # fetch_folder, sub, dump_folder, labels
     parameters = []
