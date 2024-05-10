@@ -197,7 +197,10 @@ def pretrain(args):
     # args.root = "/media/data_ssd/data/eeg_dat_val"
     # val_loader = prepare_dataloader(args, shuffle=True, transform='16_diffs') # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
     # args.root = "/media/data_ssd/data/eeg_dat"
+    print('started loading data loader')
     train_loader = prepare_dataloader(args, shrink_factor=args.shrink_factor, seed=args.seed, shuffle=True, transform='16_diffs')
+    print('loaded data loader, it has ', len(train_loader), 'samples')
+
 
     # define the trainer
     # N_version = (
@@ -264,6 +267,17 @@ class Args:
 
 
 if __name__=="__main__":
+    try:
+        print("/opt/ml/input/data/train ", len(os.listdir('/opt/ml/input/data/train')))
+    except:
+        print("/opt/ml/input/data/train doesn't  exist")
+
+    try:
+        print("/e3jg3b4v/nfs/data/eeg_dat ", len(os.listdir('/e3jg3b4v/nfs/data/eeg_dat')))
+    except:
+        print("/e3jg3b4v/nfs/data/eeg_dat doesn't  exist")
+
+
     args = Args()
     parser = argparse.ArgumentParser()
     parser.add_argument("--emb_size", type=int, default=100, help="size of hidden layers")
