@@ -75,7 +75,6 @@ class UnsupervisedPretrainLoader(torch.utils.data.Dataset):
             )
             + 1e-8
         )
-
         # samples = torch.FloatTensor(samples).transpose(1, 0)
         samples = torch.FloatTensor(samples)
         return samples
@@ -152,6 +151,7 @@ class LitModel_supervised_pretrain(pl.LightningModule):
         optimizer = mup.optim.MuAdamW(
             self.model.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay
         )
+        # optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
 
         # set learning rate scheduler
         # use a cosine annealing scheduler that reduces the learning rate by 10x over the course of training
@@ -194,9 +194,9 @@ def prepare_dataloader(args, shuffle=True, shrink_factor=1, seed=42, transform=N
 
 def pretrain(args):
     # get data loaders
-    args.root = "/media/data_ssd/data/eeg_dat_val"
-    val_loader = prepare_dataloader(args, shuffle=True, transform='16_diffs') # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
-    args.root = "/media/data_ssd/data/eeg_dat"
+    # args.root = "/media/data_ssd/data/eeg_dat_val"
+    # val_loader = prepare_dataloader(args, shuffle=True, transform='16_diffs') # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
+    # args.root = "/media/data_ssd/data/eeg_dat"
     train_loader = prepare_dataloader(args, shrink_factor=args.shrink_factor, seed=args.seed, shuffle=True, transform='16_diffs')
 
     # define the trainer
@@ -205,19 +205,29 @@ def pretrain(args):
     # )
     N_version = args.name
     # define the model
-    save_path = f"/media/data_ssd/results/eeg/May_8_checkpoints/{N_version}-unsupervised/checkpoints"
+    #TODO: change the path to work with s3
+
+    save_path = f"/opt/ml/output/data/May_10_checkpoints/{N_version}-unsupervised/checkpoints"
 
     model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps)
-    set_base_shapes(model, "/home/workplace/thomas/BIOT/base_shapes_LitModel.bsh")
+    rescale_params=True
+    if args.checkpoint:
+        state_dict = torch.load(args.checkpoint)
+        model.load_state_dict(state_dict["state_dict"])
+        print('load  from ', args.checkpoint)
+        rescale_params=False
+
+    
+    set_base_shapes(model, "base_shapes_LitModel_12_deep.bsh", rescale_params=rescale_params)
 
     logger = TensorBoardLogger(
-        save_dir="/media/data_ssd/results/eeg/",
+        save_dir="/opt/ml/output/data/",
         version=f"{N_version}/checkpoints",
-        name="May_8",
+        name="May_10",
     )
 
     trainer = pl.Trainer(
-        devices=[0, 1],
+        # devices=[0, 1],
         accelerator="gpu",
         strategy=DDPStrategy(find_unused_parameters=False),
         benchmark=True,
@@ -230,8 +240,8 @@ def pretrain(args):
     )
 
     # train the model
-    trainer.fit(model, train_loader, val_loader)
-    trainer.validate(model, val_loader)
+    # trainer.validate(model, val_loader)
+    trainer.fit(model, train_loader)
 
 class Args:
     epochs = -1
@@ -240,9 +250,9 @@ class Args:
     weight_decay = 0.00013458
     batch_size = 128
     num_workers = 32
-    root = "/media/data_ssd/data/eeg_dat"
+    root = "/opt/ml/input/data/train"
     emb_size = 32
-    depth = 4
+    depth = 12
     heads = emb_size//8
     n_fft = 200
     hop_length = n_fft//2
@@ -250,6 +260,7 @@ class Args:
     steps = -1
     shrink_factor = 1
     seed = 42
+    checkpoint = None
 
 
 if __name__=="__main__":
@@ -263,6 +274,7 @@ if __name__=="__main__":
     parser.add_argument("--weight_decay", type=float, default=0.00013458, help="weight decay")
     parser.add_argument("--shrink_factor", type=int, default=1, help="shrink factor for the dataset")
     parser.add_argument("--seed", type=int, default=42, help="random seed")
+    parser.add_argument("--depth", type=int, default=4, help="depth of the model")
     a = parser.parse_args()
     if a.epochs == -1 and a.steps == -1:
         raise ValueError("Must specify either epochs or steps")
@@ -273,9 +285,11 @@ if __name__=="__main__":
     args.shrink_factor = a.shrink_factor
     args.epochs = a.epochs
     args.steps = a.steps
+    args.depth = a.depth
     # if a.epochs != -1:
     #     args.steps = a.epochs * 391700
     # args.device = a.device
     args.seed = a.seed
-    args.name = f"May_8_{args.emb_size}"
+    args.name = f"May_10_{args.emb_size}"
+    # args.checkpoint = "/media/data_ssd/results/eeg/May_8_checkpoints/May_8_512-unsupervised/checkpoints/epoch=9_step=160000.ckpt"
     pretrain(args)

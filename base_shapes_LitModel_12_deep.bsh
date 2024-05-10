@@ -1,0 +1,407 @@
+# This is a base shape file encoded in yaml
+# - `null` indicates a dimension is "finite", i.e. a non-"width" dimension
+# - a number indicates the base dimension of an "infinite" dimension, i.e. some notion of "width"
+model.biot.channel_tokens.weight:
+- null
+- 256
+model.biot.index:
+- null
+model.biot.patch_embedding.projection.bias:
+- 256
+model.biot.patch_embedding.projection.weight:
+- 256
+- null
+model.biot.transformer.layers.layers.0.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.0.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.0.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.0.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.0.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.0.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.0.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.0.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.0.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.0.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.0.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.0.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.0.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.1.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.1.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.1.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.1.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.1.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.1.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.1.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.1.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.1.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.1.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.1.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.1.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.1.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.10.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.10.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.10.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.10.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.10.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.10.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.10.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.10.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.10.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.10.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.10.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.10.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.10.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.11.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.11.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.11.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.11.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.11.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.11.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.11.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.11.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.11.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.11.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.11.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.11.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.11.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.2.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.2.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.2.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.2.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.2.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.2.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.2.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.2.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.2.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.2.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.2.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.2.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.2.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.3.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.3.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.3.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.3.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.3.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.3.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.3.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.3.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.3.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.3.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.3.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.3.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.3.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.4.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.4.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.4.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.4.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.4.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.4.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.4.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.4.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.4.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.4.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.4.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.4.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.4.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.5.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.5.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.5.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.5.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.5.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.5.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.5.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.5.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.5.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.5.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.5.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.5.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.5.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.6.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.6.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.6.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.6.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.6.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.6.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.6.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.6.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.6.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.6.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.6.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.6.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.6.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.7.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.7.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.7.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.7.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.7.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.7.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.7.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.7.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.7.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.7.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.7.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.7.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.7.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.8.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.8.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.8.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.8.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.8.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.8.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.8.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.8.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.8.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.8.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.8.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.8.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.8.1.norm.weight:
+- 256
+model.biot.transformer.layers.layers.9.0.fn.to_k.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.9.0.fn.to_out.bias:
+- 256
+model.biot.transformer.layers.layers.9.0.fn.to_out.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.9.0.fn.to_q.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.9.0.fn.to_v.weight:
+- 256
+- 256
+model.biot.transformer.layers.layers.9.0.norm.bias:
+- 256
+model.biot.transformer.layers.layers.9.0.norm.weight:
+- 256
+model.biot.transformer.layers.layers.9.1.fn.fn.w1.bias:
+- 1024
+model.biot.transformer.layers.layers.9.1.fn.fn.w1.weight:
+- 1024
+- 256
+model.biot.transformer.layers.layers.9.1.fn.fn.w2.bias:
+- 256
+model.biot.transformer.layers.layers.9.1.fn.fn.w2.weight:
+- 256
+- 1024
+model.biot.transformer.layers.layers.9.1.norm.bias:
+- 256
+model.biot.transformer.layers.layers.9.1.norm.weight:
+- 256
+model.fn1.bias:
+- 256
+model.fn1.weight:
+- 256
+- 256
+model.fn2.bias:
+- 256
+model.fn2.weight:
+- 256
+- 256

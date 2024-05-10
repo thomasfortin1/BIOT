@@ -117,7 +117,8 @@ class BIOTEncoder(nn.Module):
             output_mult=1,
             # local_attn_window_size=emb_size,
             # scaling=scaling
-            use_mup=kwargs.get("use_mup", False)
+            # use_mup=kwargs.get("use_mup", False)
+            use_mup=True
         )
         self.positional_encoding = PositionalEncoding(emb_size)
 

@@ -292,7 +292,7 @@ def supervised(args):
             print(f"load pretrain model from {args.pretrain_model_path}")
 
     elif args.model == "my_BIOT":
-        use_mup = True
+        use_mup = False
         model = BIOTClassifier(
             n_classes=args.n_classes,
             emb_size=512,
@@ -300,7 +300,7 @@ def supervised(args):
             n_channels=args.in_channels,
             n_fft=args.token_size,
             hop_length=args.hop_length,
-            use_mup=True
+            use_mup=use_mup
         )
 
         if args.pretrain_model_path and (args.sampling_rate == 200):
@@ -309,9 +309,9 @@ def supervised(args):
             for k, v in checkpoint['state_dict'].items():
                 if 'model.biot.' in k:
                     state_dict[k.replace('model.biot.', '')] = v
+            # set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=True)
             model.biot.load_state_dict(state_dict=state_dict)
             print(f"load pretrain model from {args.pretrain_model_path}")
-            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=False)
         else:
             set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
 
@@ -335,7 +335,7 @@ def supervised(args):
         monitor='val_cohen',
         mode='max',
         dirpath=f'./checkpoints/{version}',
-        filename='pre-trained_mine_multi_gpu_test_with_correct_normalzation_512_{epoch:02d}-val_cohen{val_cohen:.2f}',
+        filename='pre-trained_mine_May_8_{epoch:02d}-val_cohen{val_cohen:.2f}',
         auto_insert_metric_name=False
      )
 

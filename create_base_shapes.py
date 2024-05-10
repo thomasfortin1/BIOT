@@ -12,7 +12,7 @@ from model import BIOTClassifier
 class Args:
     emb_size = None
     heads = None
-    depth = 4
+    depth = 12
     encoder_var = 1
 
 base_args = Args()
@@ -23,33 +23,33 @@ delta_args = Args()
 delta_args.emb_size = 512
 delta_args.heads = 512//32
 
-# base_model = LitModel_supervised_pretrain(base_args, "")
-# delta_model = LitModel_supervised_pretrain(delta_args, "")
-# filename = 'base_shapes_LitModel_test.bsh'
+base_model = LitModel_supervised_pretrain(base_args, "")
+delta_model = LitModel_supervised_pretrain(delta_args, "")
+filename = 'base_shapes_LitModel_12_deep.bsh'
 
 
-base_model = BIOTClassifier(
-    n_classes=2,
-    # set the n_channels according to the pretrained model if necessary
-    n_channels=16,
-    n_fft=256,
-    hop_length=128,
-    emb_size=256, 
-    heads=256//8, 
-    depth=4,
-    use_mup=True,
-)
+# base_model = BIOTClassifier(
+#     n_classes=2,
+#     # set the n_channels according to the pretrained model if necessary
+#     n_channels=16,
+#     n_fft=256,
+#     hop_length=128,
+#     emb_size=256, 
+#     heads=256//8, 
+#     depth=4,
+#     use_mup=True,
+# )
 
-delta_model = BIOTClassifier(
-    n_classes=2,
-    n_channels=16,
-    n_fft=256,
-    hop_length=128,
-    emb_size=512, 
-    heads=512//32, 
-    depth=4,
-    use_mup=True,
-)
+# delta_model = BIOTClassifier(
+#     n_classes=2,
+#     n_channels=16,
+#     n_fft=256,
+#     hop_length=128,
+#     emb_size=512, 
+#     heads=512//32, 
+#     depth=4,
+#     use_mup=True,
+# )
 
-filename = 'base_shapes_BIOTClassifier_2classes.bsh'
+# filename = 'base_shapes_BIOTClassifier_2classes.bsh'
 make_base_shapes(base_model, delta_model, filename)
