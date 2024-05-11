@@ -117,8 +117,8 @@ class BIOTEncoder(nn.Module):
             output_mult=1,
             # local_attn_window_size=emb_size,
             # scaling=scaling
-            # use_mup=kwargs.get("use_mup", False)
-            use_mup=True
+            use_mup=kwargs.get("use_mup", False)
+            # use_mup=False
         )
         self.positional_encoding = PositionalEncoding(emb_size)
 
@@ -129,6 +129,8 @@ class BIOTEncoder(nn.Module):
         )
         if kwargs.get("use_mup", False):
             print("using mup")
+        else:
+            print("not using mup")
 
     def stft(self, sample):
         signal = []

@@ -312,9 +312,8 @@ def supervised(args):
             # set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=True)
             model.biot.load_state_dict(state_dict=state_dict)
             print(f"load pretrain model from {args.pretrain_model_path}")
-        else:
-            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
-
+        # else:
+        #     set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
 
     else:
         raise NotImplementedError

@@ -81,7 +81,7 @@ class UnsupervisedPretrainLoader(torch.utils.data.Dataset):
 
 
 class LitModel_supervised_pretrain(pl.LightningModule):
-    def __init__(self, args, save_path, max_steps=-1):
+    def __init__(self, args, save_path, max_steps=-1, use_mup=False):
         super().__init__()
         self.args = args
         self.save_path = save_path
@@ -89,7 +89,7 @@ class LitModel_supervised_pretrain(pl.LightningModule):
         self.T = 0.2
         # self.T = 0.1 # for emb of 128 let's try this, it actually made the loss way lower somehow..
         self.val_loss = 0
-        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=16, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft) # 16 for PREST (resting) + 2 for SHHS (sleeping)
+        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=16, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup) # 16 for PREST (resting) + 2 for SHHS (sleeping)
         
     def training_step(self, batch, batch_idx):
 
@@ -194,12 +194,12 @@ def prepare_dataloader(args, shuffle=True, shrink_factor=1, seed=42, transform=N
 
 def pretrain(args):
     # get data loaders
-    # args.root = "/media/data_ssd/data/eeg_dat_val"
-    # val_loader = prepare_dataloader(args, shuffle=True, transform='16_diffs') # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
-    # args.root = "/media/data_ssd/data/eeg_dat"
-    print('started loading data loader')
+    args.root = "/media/data_ssd/data/eeg_dat_val"
+    val_loader = prepare_dataloader(args, shuffle=True, transform='16_diffs') # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
+    args.root = "/media/data_ssd/data/eeg_dat"
+
     train_loader = prepare_dataloader(args, shrink_factor=args.shrink_factor, seed=args.seed, shuffle=True, transform='16_diffs')
-    print('loaded data loader, it has ', len(train_loader), 'samples')
+
 
 
     # define the trainer
@@ -210,9 +210,9 @@ def pretrain(args):
     # define the model
     #TODO: change the path to work with s3
 
-    save_path = f"/opt/ml/output/data/May_10_checkpoints/{N_version}-unsupervised/checkpoints"
+    save_path = f"/media/data_ssd/results/eeg/May_10_checkpoints/{N_version}-unsupervised/checkpoints"
 
-    model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps)
+    model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps, use_mup=True)
     rescale_params=True
     if args.checkpoint:
         state_dict = torch.load(args.checkpoint)
@@ -221,10 +221,10 @@ def pretrain(args):
         rescale_params=False
 
     
-    set_base_shapes(model, "base_shapes_LitModel_12_deep.bsh", rescale_params=rescale_params)
+    set_base_shapes(model, "base_shapes_LitModel.bsh", rescale_params=rescale_params)
 
     logger = TensorBoardLogger(
-        save_dir="/opt/ml/output/data/",
+        save_dir="/media/data_ssd/results/eeg",
         version=f"{N_version}/checkpoints",
         name="May_10",
     )
@@ -244,7 +244,7 @@ def pretrain(args):
 
     # train the model
     # trainer.validate(model, val_loader)
-    trainer.fit(model, train_loader)
+    trainer.fit(model, train_loader, val_loader)
 
 class Args:
     epochs = -1
@@ -253,9 +253,9 @@ class Args:
     weight_decay = 0.00013458
     batch_size = 128
     num_workers = 32
-    root = "/opt/ml/input/data/train"
+    root = "/media/data_ssd/data/eeg_dat"
     emb_size = 32
-    depth = 12
+    depth = 4
     heads = emb_size//8
     n_fft = 200
     hop_length = n_fft//2
@@ -267,16 +267,6 @@ class Args:
 
 
 if __name__=="__main__":
-    try:
-        print("/opt/ml/input/data/train ", len(os.listdir('/opt/ml/input/data/train')))
-    except:
-        print("/opt/ml/input/data/train doesn't  exist")
-
-    try:
-        print("/e3jg3b4v/nfs/data/eeg_dat ", len(os.listdir('/e3jg3b4v/nfs/data/eeg_dat')))
-    except:
-        print("/e3jg3b4v/nfs/data/eeg_dat doesn't  exist")
-
 
     args = Args()
     parser = argparse.ArgumentParser()
@@ -305,5 +295,5 @@ if __name__=="__main__":
     # args.device = a.device
     args.seed = a.seed
     args.name = f"May_10_{args.emb_size}"
-    # args.checkpoint = "/media/data_ssd/results/eeg/May_8_checkpoints/May_8_512-unsupervised/checkpoints/epoch=9_step=160000.ckpt"
+    # args.checkpoint = "/media/data_ssd/results/eeg/May_9_checkpoints/May_9_512-unsupervised/checkpoints/epoch=7_step=120000.ckpt"
     pretrain(args)
