@@ -38,13 +38,15 @@ class PatchFrequencyEmbedding(nn.Module):
 
 
 class ClassificationHead(nn.Sequential):
-    def __init__(self, emb_size, n_classes, use_mup=False):
+    def __init__(self, emb_size, n_classes, use_mup=False, readout_zero_init=False, output_mult=1.0):
         super().__init__()
         if use_mup:
             self.clshead = nn.Sequential(
                 nn.ELU(),
-                mup.MuReadout(emb_size, n_classes)
+                mup.MuReadout(emb_size, n_classes, readout_zero_init=readout_zero_init, output_mult=output_mult)
             )
+            print('readout_zero_init', readout_zero_init)
+            print('output_mult', output_mult)
         else:
             self.clshead = nn.Sequential(
                 nn.ELU(),
@@ -94,6 +96,7 @@ class BIOTEncoder(nn.Module):
         n_fft=200,
         hop_length=100,
         scaling=None,
+        use_mup=False,
         **kwargs
     ):
         super().__init__()
@@ -117,8 +120,8 @@ class BIOTEncoder(nn.Module):
             output_mult=1,
             # local_attn_window_size=emb_size,
             # scaling=scaling
-            use_mup=kwargs.get("use_mup", False)
-            # use_mup=False
+            use_mup=use_mup
+            # use_mup=True
         )
         self.positional_encoding = PositionalEncoding(emb_size)
 
@@ -127,7 +130,7 @@ class BIOTEncoder(nn.Module):
         self.index = nn.Parameter(
             torch.LongTensor(range(n_channels)), requires_grad=False
         )
-        if kwargs.get("use_mup", False):
+        if use_mup:
             print("using mup")
         else:
             print("not using mup")
@@ -185,10 +188,10 @@ class BIOTEncoder(nn.Module):
 
 # supervised classifier module
 class BIOTClassifier(nn.Module):
-    def __init__(self, emb_size=256, heads=8, depth=4, n_classes=6, **kwargs):
+    def __init__(self, emb_size=256, heads=8, depth=4, n_classes=6, readout_zero_init=False, output_mult=1.0, **kwargs):
         super().__init__()
         self.biot = BIOTEncoder(emb_size=emb_size, heads=heads, depth=depth, **kwargs)
-        self.classifier = ClassificationHead(emb_size, n_classes, use_mup=kwargs.get("use_mup", False))
+        self.classifier = ClassificationHead(emb_size, n_classes, use_mup=kwargs.get("use_mup", False), readout_zero_init=readout_zero_init, output_mult=output_mult)
 
     def forward(self, x):
         x = self.biot(x)
@@ -198,15 +201,19 @@ class BIOTClassifier(nn.Module):
 
 # unsupervised pre-train module
 class UnsupervisedPretrain(nn.Module):
-    def __init__(self, emb_size=256, heads=8, depth=4, n_channels=18, encoder_var=1, **kwargs):
+    def __init__(self, emb_size=256, heads=8, depth=4, n_channels=18, encoder_var=1, use_mup=False, **kwargs):
         super(UnsupervisedPretrain, self).__init__()
-        self.biot = BIOTEncoder(emb_size=emb_size, heads=heads, depth=depth, n_channels=n_channels, encoder_var=encoder_var, **kwargs)
+        self.biot = BIOTEncoder(emb_size=emb_size, heads=heads, depth=depth, n_channels=n_channels, encoder_var=encoder_var, use_mup=use_mup, **kwargs)
         self.fn1 = nn.Linear(emb_size, emb_size)
         # self.fn2 = mup.MuReadout(emb_size, emb_size, bias=False) # include output mult later
         self.fn2 = nn.Linear(emb_size, emb_size)
         self.gelu = nn.GELU()
         self.init_method = init_method_normal((encoder_var/emb_size) ** .5)
-        self.reset_parameters()
+        if use_mup:
+            print("using mup")
+            self.reset_parameters()
+        else:
+            print("not using mup")
 
     def reset_parameters(self):
         # nn.init.kaiming_normal_(self.fn1.weight, a=1, mode='fan_in')

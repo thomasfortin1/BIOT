@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.strategies import DDPStrategy
 import mup
 from mup import set_base_shapes
-from eeg_unsupervised_pretrain_test import prepare_dataloader, LitModel_supervised_pretrain
+from nhanes_unsupervised_pretrain_test import prepare_dataloader, LitModel_supervised_pretrain
 from run_binary_supervised import LitModel_finetune, prepare_TUAB_dataloader
 from model import BIOTClassifier
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -16,7 +16,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 EPOCHS = 1
 # lr is a hyperparameter for tuning
 WEIGHT_DECAY = 1e-5
-BATCH_SIZE = 100
+BATCH_SIZE = 256
 NUM_WORKERS = 32
 KAGGLE_ROOT = "/home/workplace/thomas/BIOT/unlabeled_preprocessed" 
 LONG_TERM_ROOT = "/home/workplace/thomas/BIOT/unlabeled_long_term_movement"
@@ -29,13 +29,13 @@ class Args:
     weight_decay = WEIGHT_DECAY
     batch_size = BATCH_SIZE
     num_workers = NUM_WORKERS
-    root = "/media/data_ssd/data/eeg_dat"
+    root = "/media/data_ssd/data/nhanes"
     emb_size = 256
     depth = 4
     heads = emb_size//8
     cutoff = None
-    hop_length = 128
-    n_fft = 256
+    hop_length = 40
+    n_fft = 80
 
 
 def objective(trial):
@@ -56,7 +56,7 @@ def objective(trial):
     # args.encoder_var = encoder_var
 
     train_loader = prepare_dataloader(args)
-    args.root = "/media/data_ssd/data/eeg_dat_val"
+    args.root = "/media/data_ssd/data/nhanes_val"
     val_loader = prepare_dataloader(args, shuffle=False)
     
     model = LitModel_supervised_pretrain(args, f"log-pretrain/unsupervised_hyp_tuning/checkpoints", use_mup=True)
@@ -64,12 +64,13 @@ def objective(trial):
     print('set the base shapes')
     
     trainer = pl.Trainer(
-        devices=[1],
+        devices=[0],
         accelerator="gpu",
         benchmark=True,
         enable_checkpointing=False,
-        max_epochs=1,
-        fast_dev_run=False
+        max_steps=100000,
+        fast_dev_run=False,
+        profiler="simple"
     )
 
     # hyperparameters = dict(lr=lr, encoder_var=encoder_var)

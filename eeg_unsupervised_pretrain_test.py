@@ -64,10 +64,10 @@ class UnsupervisedPretrainLoader(torch.utils.data.Dataset):
         memmap = np.memmap(self.dats[i], dtype=float, mode = 'r', offset=24*2560*8*(self.inds[i]-index), shape=(2560, 24))
         samples = np.array(memmap).T
 
-        if self.transform:
-            samples = get_channel_diffs(samples)
+        # if self.transform:
+        #     samples = get_channel_diffs(samples)
 
-        samples = resample(samples, 2000, axis=-1)
+        # samples = resample(samples, 2000, axis=-1)
 
         samples = samples / (
             np.quantile(
@@ -89,12 +89,12 @@ class LitModel_supervised_pretrain(pl.LightningModule):
         self.T = 0.2
         # self.T = 0.1 # for emb of 128 let's try this, it actually made the loss way lower somehow..
         self.val_loss = 0
-        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=16, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup) # 16 for PREST (resting) + 2 for SHHS (sleeping)
+        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=24, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup) # 16 for PREST (resting) + 2 for SHHS (sleeping)
         
     def training_step(self, batch, batch_idx):
 
         # store the checkpoint every 40k steps or at the end of training
-        if self.global_step % 40000 == 0 or self.global_step == self.max_steps-5:
+        if self.global_step % 20000 == 0 or self.global_step == self.max_steps-5:
             self.trainer.save_checkpoint(
                 filepath=f"{self.save_path}/epoch={self.current_epoch}_step={self.global_step}.ckpt"
             )
@@ -195,12 +195,9 @@ def prepare_dataloader(args, shuffle=True, shrink_factor=1, seed=42, transform=N
 def pretrain(args):
     # get data loaders
     args.root = "/media/data_ssd/data/eeg_dat_val"
-    val_loader = prepare_dataloader(args, shuffle=True, transform='16_diffs') # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
+    val_loader = prepare_dataloader(args, shuffle=True) # This is actually going to make it shuffle every epoch, not just once which is not what I want to do.
     args.root = "/media/data_ssd/data/eeg_dat"
-
-    train_loader = prepare_dataloader(args, shrink_factor=args.shrink_factor, seed=args.seed, shuffle=True, transform='16_diffs')
-
-
+    train_loader = prepare_dataloader(args, shrink_factor=args.shrink_factor, seed=args.seed, shuffle=True)
 
     # define the trainer
     # N_version = (
@@ -210,7 +207,7 @@ def pretrain(args):
     # define the model
     #TODO: change the path to work with s3
 
-    save_path = f"/media/data_ssd/results/eeg/May_10_checkpoints/{N_version}-unsupervised/checkpoints"
+    save_path = f"/media/data_ssd/results/eeg_again/mup_test/{N_version}-unsupervised/checkpoints"
 
     model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps, use_mup=True)
     rescale_params=True
@@ -224,13 +221,13 @@ def pretrain(args):
     set_base_shapes(model, "base_shapes_LitModel.bsh", rescale_params=rescale_params)
 
     logger = TensorBoardLogger(
-        save_dir="/media/data_ssd/results/eeg",
+        save_dir="/media/data_ssd/results/eeg_again",
         version=f"{N_version}/checkpoints",
-        name="May_10",
+        name="mup_test",
     )
 
     trainer = pl.Trainer(
-        # devices=[0, 1],
+        devices=[args.device],
         accelerator="gpu",
         strategy=DDPStrategy(find_unused_parameters=False),
         benchmark=True,
@@ -251,13 +248,13 @@ class Args:
     lr = 0.00140966
     encoder_var = 1
     weight_decay = 0.00013458
-    batch_size = 128
+    batch_size = 100
     num_workers = 32
     root = "/media/data_ssd/data/eeg_dat"
     emb_size = 32
     depth = 4
     heads = emb_size//8
-    n_fft = 200
+    n_fft = 256
     hop_length = n_fft//2
     # device = 0
     steps = -1
@@ -273,7 +270,7 @@ if __name__=="__main__":
     parser.add_argument("--emb_size", type=int, default=100, help="size of hidden layers")
     parser.add_argument("--epochs", type=int, default=-1, help="number of epochs")
     parser.add_argument("--steps", type=int, default=-1, help="number of steps")
-    # parser.add_argument("--device", type=int, default=0, help="device to use")
+    parser.add_argument("--device", type=int, default=0, help="device to use")
     parser.add_argument("--lr", type=float, default=0.00140966, help="learning rate")
     parser.add_argument("--weight_decay", type=float, default=0.00013458, help="weight decay")
     parser.add_argument("--shrink_factor", type=int, default=1, help="shrink factor for the dataset")
@@ -292,8 +289,8 @@ if __name__=="__main__":
     args.depth = a.depth
     # if a.epochs != -1:
     #     args.steps = a.epochs * 391700
-    # args.device = a.device
+    args.device = a.device
     args.seed = a.seed
-    args.name = f"May_10_{args.emb_size}"
+    args.name = f"_{args.emb_size}"
     # args.checkpoint = "/media/data_ssd/results/eeg/May_9_checkpoints/May_9_512-unsupervised/checkpoints/epoch=7_step=120000.ckpt"
     pretrain(args)

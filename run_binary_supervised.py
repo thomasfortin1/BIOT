@@ -185,15 +185,15 @@ def prepare_TUAB_dataloader_custom(args):
 
 def prepare_TUAB_dataloader(args):
     # set random seed
-    seed = 12345
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
+    # seed = 12345
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    np.random.seed(args.seed)
 
     # root = "/media/data_ssd/data/tuab_processed_mine" # 24 channels, 256Hz
-    # root = "/media/data_ssd/data/tuab_processed"
-    root = "/media/data_ssd/data/tuab_processed_16_256"
+    root = "/media/data_ssd/data/tuab_processed"
+    # root = "/media/data_ssd/data/tuab_processed_16_256"
 
     train_files = os.listdir(os.path.join(root, "train"))
     np.random.shuffle(train_files)
@@ -400,20 +400,20 @@ def supervised(args):
             use_mup=use_mup,
             emb_size=512,
         )
-        if args.pretrain_model_path and (args.sampling_rate == 200):
-            model.biot.load_state_dict(torch.load(args.pretrain_model_path))
-            print(f"load pretrain model from {args.pretrain_model_path}")
+        # if args.pretrain_model_path and (args.sampling_rate == 200):
+        #     model.biot.load_state_dict(torch.load(args.pretrain_model_path))
+        #     print(f"load pretrain model from {args.pretrain_model_path}")
         
-        if args.pretrain_model_path and (args.sampling_rate == 256):
+        if args.pretrain_model_path: #and (args.sampling_rate == 256):
             # load from a lightning checkpoint
             checkpoint = torch.load(args.pretrain_model_path)
             state_dict = {}
             for k, v in checkpoint['state_dict'].items():
                 if 'model.biot.' in k:
                     state_dict[k.replace('model.biot.', '')] = v
+            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=True)
             model.biot.load_state_dict(state_dict=state_dict)
             print(f"load pretrain model from {args.pretrain_model_path}")
-            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=False)
         elif use_mup:
             set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
 
@@ -440,7 +440,7 @@ def supervised(args):
      )
 
     trainer = pl.Trainer(
-        devices=[0,1],
+        devices=[0],
         accelerator="gpu",
         strategy=DDPStrategy(find_unused_parameters=False),
         # auto_select_gpus=True,
@@ -462,6 +462,8 @@ def supervised(args):
         model=lightning_model, ckpt_path="best", dataloaders=test_loader
     )[0]
     print(pretrain_result)
+
+    return pretrain_result['test_auroc']
 
 
 if __name__ == "__main__":
@@ -503,7 +505,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scale", type=float, default=None, help="attention scaling factor"
     )
+    parser.add_argument(
+        "--output_file", type=str, default="test_auroc.txt", help="output file"
+    )
+    parser.add_argument("--seed", type=int, default=12345, help="random seed")
     args = parser.parse_args()
     print(args)
 
-    supervised(args)
+    test_auroc = supervised(args)
+    with open(args.output_file, "a") as f:
+        f.write(f"{test_auroc}\n")

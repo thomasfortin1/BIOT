@@ -17,6 +17,8 @@ import mup
 from mup import set_base_shapes
 from model import UnsupervisedPretrain
 
+import time
+
 
 def get_memmap_length(path):
     memmap = np.memmap(path, dtype=float, mode='r')
@@ -32,26 +34,26 @@ class UnsupervisedPretrainLoader(torch.utils.data.Dataset):
                     dats.append(os.path.join(root, folder, file))
         self.dats = dats
         self.dats = self.dats[::shrink_factor]
-        self.inds = np.cumsum([get_memmap_length(dat)//800 for dat in self.dats]).astype(int)
+        self.inds = np.cumsum([get_memmap_length(dat)//800 for dat in self.dats]).astype(int) - 1
         
     def __len__(self):
         return self.inds[-1]
 
     def __getitem__(self, index):
         i = np.searchsorted(self.inds, index)
-        memmap = np.memmap(self.dats[i], dtype=float, mode = 'r', offset=3*800*8(self.inds[i]-index), shape=(800, 3))
-        samples = np.array(memmap)
+        memmap = np.memmap(self.dats[i], dtype=float, mode = 'r', offset=3*8*800*(self.inds[i]-index), shape=(800, 3))
+        samples = np.array(memmap).T
         samples = samples / (
             np.quantile(
                 np.abs(samples), q=0.95, method="linear", axis=-1, keepdims=True
             )
             + 1e-8
         )
-        samples = torch.FloatTensor(samples).transpose(1, 0)
+        samples = torch.FloatTensor(samples)
         return samples
 
 class LitModel_supervised_pretrain(pl.LightningModule):
-    def __init__(self, args, save_path, max_steps=-1):
+    def __init__(self, args, save_path, max_steps=-1, use_mup=False):
         super().__init__()
         self.args = args
         self.save_path = save_path
@@ -59,7 +61,7 @@ class LitModel_supervised_pretrain(pl.LightningModule):
         self.T = 0.2
         # self.T = 0.1 # for emb of 128 let's try this, it actually made the loss way lower somehow..
         self.val_loss = 0
-        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=3, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft) # 16 for PREST (resting) + 2 for SHHS (sleeping)
+        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=3, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup) # 16 for PREST (resting) + 2 for SHHS (sleeping)
         
     def training_step(self, batch, batch_idx):
 
@@ -120,9 +122,9 @@ class LitModel_supervised_pretrain(pl.LightningModule):
 
         # set learning rate scheduler
         # use a cosine annealing scheduler that reduces the learning rate by 10x over the course of training
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=self.max_steps, eta_min=self.args.lr/10
-        )
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        #     optimizer, T_max=self.max_steps, eta_min=self.args.lr/10
+        # )
 
         # scheduler = torch.optim.lr_scheduler.StepLR(
         #     optimizer, step_size=10000, gamma=0.3
@@ -150,6 +152,7 @@ def prepare_dataloader(args, shuffle=True, shrink_factor=1, seed=42):
         batch_size=args.batch_size,
         shuffle=shuffle,
         num_workers=args.num_workers,
+        # num_workers=1,
         persistent_workers=True,
         drop_last=True
     )
@@ -170,15 +173,15 @@ def pretrain(args):
     # )
     N_version = args.name
     # define the model
-    save_path = f"/media/data_ssd/results/biosignals_nhanes/scaling_law_3_test_1_checkpoints/{N_version}-unsupervised/checkpoints"
+    save_path = f"/media/data_ssd/results/nhanes_again/mup_test/{N_version}-unsupervised/checkpoints"
 
-    model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps)
+    model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps, use_mup=True)
     set_base_shapes(model, "/home/workplace/thomas/BIOT/base_shapes_LitModel.bsh")
 
     logger = TensorBoardLogger(
-        save_dir="/media/data_ssd/results/biosignals_nhanes/",
+        save_dir="/media/data_ssd/results/nhanes_again/",
         version=f"{N_version}/checkpoints",
-        name="scaling_law_3_test_1",
+        name="mup_test",
     )
 
     trainer = pl.Trainer(
@@ -242,5 +245,5 @@ if __name__=="__main__":
     #     args.steps = a.epochs * 391700
     args.device = a.device
     args.seed = a.seed
-    args.name = f"scaling_law_3_test_1_{args.emb_size}"
+    args.name = f"mup_test{args.emb_size}"
     pretrain(args)

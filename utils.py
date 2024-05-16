@@ -65,8 +65,8 @@ class TUABLoader(torch.utils.data.Dataset):
         sample = pickle.load(open(os.path.join(self.root, self.files[index]), "rb"))
         X = sample["X"]
         # from default 200Hz to ?
-        # if self.sampling_rate != self.default_rate:
-        #     X = resample(X, 10 * self.sampling_rate, axis=-1)
+        if X.shape[-1] != 10 * self.sampling_rate:
+            X = resample(X, 10 * self.sampling_rate, axis=-1)
         assert X.shape[-1] == 10 * self.sampling_rate, f"Data has sampling rate of {X.shape[-1]//10} Hz, not {self.sampling_rate} Hz"
         X = X / (
             np.quantile(np.abs(X), q=0.95, method="linear", axis=-1, keepdims=True)

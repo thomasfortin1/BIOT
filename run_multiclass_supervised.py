@@ -292,7 +292,7 @@ def supervised(args):
             print(f"load pretrain model from {args.pretrain_model_path}")
 
     elif args.model == "my_BIOT":
-        use_mup = False
+        use_mup = True
         model = BIOTClassifier(
             n_classes=args.n_classes,
             emb_size=512,
@@ -300,7 +300,9 @@ def supervised(args):
             n_channels=args.in_channels,
             n_fft=args.token_size,
             hop_length=args.hop_length,
-            use_mup=use_mup
+            use_mup=use_mup,
+            readout_zero_init=args.readout_zero_init,
+            output_mult=args.output_mult,
         )
 
         if args.pretrain_model_path and (args.sampling_rate == 200):
@@ -309,11 +311,11 @@ def supervised(args):
             for k, v in checkpoint['state_dict'].items():
                 if 'model.biot.' in k:
                     state_dict[k.replace('model.biot.', '')] = v
-            # set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=True)
+            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh', rescale_params=True)
             model.biot.load_state_dict(state_dict=state_dict)
             print(f"load pretrain model from {args.pretrain_model_path}")
-        # else:
-        #     set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
+        else:
+            set_base_shapes(model, 'base_shapes_BIOTClassifier_2classes.bsh')
 
     else:
         raise NotImplementedError
@@ -339,7 +341,7 @@ def supervised(args):
      )
 
     trainer = pl.Trainer(
-        devices=[1],
+        devices=[0],
         accelerator="gpu",
         strategy=DDPStrategy(find_unused_parameters=False),
         benchmark=True,
@@ -399,10 +401,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pretrain_model_path", type=str, default="", help="pretrained model path"
     )
+    parser.add_argument(
+        "--readout_zero_init", type=bool, default=False, help="readout zero init"
+    )
+    parser.add_argument(
+        "--output_mult", type=float, default=1.0, help="output multiplier"
+    )
+    parser.add_argument(
+        "--output_file", type=str, default="test_cohen.txt", help="output file"
+    )
     args = parser.parse_args()
     print(args)
 
     test_cohen = supervised(args)
-    with open("test_cohen.txt", "a") as f:
+    with open(args.output_file, "a") as f:
         f.write(f"{test_cohen}\n")
 
