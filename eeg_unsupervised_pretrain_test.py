@@ -88,9 +88,14 @@ class LitModel_supervised_pretrain(pl.LightningModule):
         self.max_steps = max_steps
         self.T = 0.2
         # self.T = 0.1 # for emb of 128 let's try this, it actually made the loss way lower somehow..
-        self.val_loss = 0
-        self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=24, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup) # 16 for PREST (resting) + 2 for SHHS (sleeping)
-        
+        self.val_losses = {emb_size: 0 for emb_size in args.emb_sizes}
+        # self.model = UnsupervisedPretrain(emb_size=args.emb_size, heads=args.heads, depth=args.depth, n_channels=24, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup) # 16 for PREST (resting) + 2 for SHHS (sleeping)
+        self.models = {}
+        for emb_size, heads in zip(args.emb_sizes, args.heads):
+            self.models[emb_size] = UnsupervisedPretrain(emb_size=emb_size, heads=heads, depth=args.depth, n_channels=24, encoder_var=args.encoder_var, hop_length=args.hop_length, n_fft=args.n_fft, use_mup=use_mup)
+            self.add_module(f"model_{emb_size}", self.models[emb_size])
+            set_base_shapes(self.models[emb_size], "base_shapes_0.bsh")
+
     def training_step(self, batch, batch_idx):
 
         # store the checkpoint every 40k steps or at the end of training
@@ -99,21 +104,23 @@ class LitModel_supervised_pretrain(pl.LightningModule):
                 filepath=f"{self.save_path}/epoch={self.current_epoch}_step={self.global_step}.ckpt"
             )
 
-        contrastive_loss = 0
         samples = batch
+        contrastive_losses = []
 
-        masked_emb, samples_emb = self.model(samples)
+        for emb_size in self.models:
+            model = self.models[emb_size]
+            masked_emb, samples_emb = model(samples)
 
-        samples_emb = F.normalize(samples_emb, dim=1, p=2)
-        masked_emb = F.normalize(masked_emb, dim=1, p=2)
-        N = samples_emb.shape[0]
+            samples_emb = F.normalize(samples_emb, dim=1, p=2)
+            masked_emb = F.normalize(masked_emb, dim=1, p=2)
+            N = samples_emb.shape[0]
+        
+            # representation similarity matrix, NxN
+            logits = torch.mm(samples_emb, masked_emb.t()) / self.T
+            labels = torch.arange(N).to(logits.device)
+            contrastive_losses.append(F.cross_entropy(logits, labels, reduction="mean"))
 
-        # representation similarity matrix, NxN
-        logits = torch.mm(samples_emb, masked_emb.t()) / self.T
-        labels = torch.arange(N).to(logits.device)
-        contrastive_loss += F.cross_entropy(logits, labels, reduction="mean")
-
-        self.log("train_loss", contrastive_loss)
+            self.log(f"train_loss_{emb_size}", contrastive_losses[-1])
 
         # print(self.optimizer.param_groups[0]["lr"])
         # sch = self.lr_schedulers()
@@ -122,34 +129,37 @@ class LitModel_supervised_pretrain(pl.LightningModule):
         # if self.global_step % 100 == 0:
         #     print(f"train_loss: {contrastive_loss}")
 
-        return contrastive_loss
+        return sum(contrastive_losses)
     
     def validation_step(self, batch, batch_idx):
         samples = batch
 
-        masked_emb, samples_emb = self.model(samples, 0)
+        for emb_size in self.models:
+            model = self.models[emb_size]
+            masked_emb, samples_emb = model(samples)
 
-        samples_emb = F.normalize(samples_emb, dim=1, p=2)
-        masked_emb = F.normalize(masked_emb, dim=1, p=2)
-        N = samples_emb.shape[0]
+            samples_emb = F.normalize(samples_emb, dim=1, p=2)
+            masked_emb = F.normalize(masked_emb, dim=1, p=2)
+            N = samples_emb.shape[0]
 
-        # representation similarity matrix, NxN
-        logits = torch.mm(samples_emb, masked_emb.t()) / self.T
-        labels = torch.arange(N).to(logits.device)
-        contrastive_loss = F.cross_entropy(logits, labels, reduction="mean")
-        self.val_loss += contrastive_loss
+            # representation similarity matrix, NxN
+            logits = torch.mm(samples_emb, masked_emb.t()) / self.T
+            labels = torch.arange(N).to(logits.device)
+            contrastive_loss = F.cross_entropy(logits, labels, reduction="mean")
+            self.val_losses[emb_size] += contrastive_loss
 
         # return contrastive_loss
 
     def on_validation_epoch_end(self):
-        self.log("val_loss", self.val_loss)
-        print(f"val_loss: {self.val_loss}")
-        self.val_loss = 0
+        for emb_size in self.models:
+            self.log(f"val_loss_{emb_size}", self.val_losses[emb_size])
+            print(f"val_loss_{emb_size}: {self.val_losses[emb_size]}")
+            self.val_losses[emb_size] = 0
 
     def configure_optimizers(self):
         # set optimizer
         optimizer = mup.optim.MuAdamW(
-            self.model.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay
+            self.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay
         )
         # optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.lr, weight_decay=self.args.weight_decay)
 
@@ -207,23 +217,21 @@ def pretrain(args):
     # define the model
     #TODO: change the path to work with s3
 
-    save_path = f"/media/data_ssd/results/eeg_again/mup_test/{N_version}-unsupervised/checkpoints"
+    save_path = f"/media/data_ssd/results/eeg_again/May_16/{N_version}-unsupervised/checkpoints"
 
     model = LitModel_supervised_pretrain(args, save_path, max_steps=args.steps, use_mup=True)
-    rescale_params=True
-    if args.checkpoint:
-        state_dict = torch.load(args.checkpoint)
-        model.load_state_dict(state_dict["state_dict"])
-        print('load  from ', args.checkpoint)
-        rescale_params=False
+    # rescale_params=True
+    # if args.checkpoint:
+    #     state_dict = torch.load(args.checkpoint)
+    #     model.load_state_dict(state_dict["state_dict"])
+    #     print('load  from ', args.checkpoint)
+    #     rescale_params=False
 
-    
-    set_base_shapes(model, "base_shapes_LitModel.bsh", rescale_params=rescale_params)
 
     logger = TensorBoardLogger(
         save_dir="/media/data_ssd/results/eeg_again",
         version=f"{N_version}/checkpoints",
-        name="mup_test",
+        name="May_16",
     )
 
     trainer = pl.Trainer(
@@ -251,9 +259,11 @@ class Args:
     batch_size = 100
     num_workers = 32
     root = "/media/data_ssd/data/eeg_dat"
-    emb_size = 32
+    # emb_size = 32
+    emb_sizes = []
     depth = 4
-    heads = emb_size//8
+    # heads = emb_size//8
+    heads = []
     n_fft = 256
     hop_length = n_fft//2
     # device = 0
@@ -267,22 +277,23 @@ if __name__=="__main__":
 
     args = Args()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--emb_size", type=int, default=100, help="size of hidden layers")
+    # parser.add_argument("--emb_size", type=int, default=100, help="size of hidden layers")
+    parser.add_argument("--emb_sizes", type=int, nargs="+", default=[32, 64, 128, 256], help="size of hidden layers")
     parser.add_argument("--epochs", type=int, default=-1, help="number of epochs")
     parser.add_argument("--steps", type=int, default=-1, help="number of steps")
     parser.add_argument("--device", type=int, default=0, help="device to use")
-    parser.add_argument("--lr", type=float, default=0.00140966, help="learning rate")
-    parser.add_argument("--weight_decay", type=float, default=0.00013458, help="weight decay")
+    parser.add_argument("--lr", type=float, default=0.0000945, help="learning rate")
+    parser.add_argument("--weight_decay", type=float, default=0.00000317, help="weight decay")
     parser.add_argument("--shrink_factor", type=int, default=1, help="shrink factor for the dataset")
     parser.add_argument("--seed", type=int, default=42, help="random seed")
     parser.add_argument("--depth", type=int, default=4, help="depth of the model")
     a = parser.parse_args()
     if a.epochs == -1 and a.steps == -1:
         raise ValueError("Must specify either epochs or steps")
-    args.emb_size = a.emb_size
+    args.emb_sizes = a.emb_sizes
     args.lr = a.lr
     args.weight_decay = a.weight_decay
-    args.heads = args.emb_size//8
+    args.heads = [emb_size//8 for emb_size in args.emb_sizes]
     args.shrink_factor = a.shrink_factor
     args.epochs = a.epochs
     args.steps = a.steps
@@ -291,6 +302,6 @@ if __name__=="__main__":
     #     args.steps = a.epochs * 391700
     args.device = a.device
     args.seed = a.seed
-    args.name = f"_{args.emb_size}"
+    args.name = "eeg_mup_test_" + "_".join([str(emb_size) for emb_size in args.emb_sizes])
     # args.checkpoint = "/media/data_ssd/results/eeg/May_9_checkpoints/May_9_512-unsupervised/checkpoints/epoch=7_step=120000.ckpt"
     pretrain(args)
